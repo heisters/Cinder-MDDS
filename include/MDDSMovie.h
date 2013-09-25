@@ -47,14 +47,14 @@ public:
 
     // Play control ------------------------------------------------------------
 public:
-    void                            setFramerate( const double fps );
-    double                          getFramerate() const;
+    void                            setFrameRate( const double fps );
+    double                          getFrameRate() const;
     double                          getAverageFps() const;
 protected:
     void                            updateAverageFps();
     double                          mAverageFps, mFpsLastSampleTime;
     uint32_t                        mFpsFrameCount, mFpsLastFrameCount;
-    std::atomic< double >           mFramerate, mNextFrameTime;
+    std::atomic< double >           mFrameRate, mNextFrameTime;
 
 
     // Async -------------------------------------------------------------------

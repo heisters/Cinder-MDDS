@@ -19,7 +19,7 @@ mFpsLastSampleTime( 0 ),
 mFpsFrameCount( 0 ),
 mFpsLastFrameCount( 0 )
 {
-    setFramerate( fps );
+    setFrameRate( fps );
 
     using namespace ci::fs;
 
@@ -80,16 +80,16 @@ Movie::draw()
  */
 
 void
-Movie::setFramerate( const double fps )
+Movie::setFrameRate( const double fps )
 {
-    mFramerate = fps;
+    mFrameRate = fps;
     mNextFrameTime = app::getElapsedSeconds();
 }
 
 double
-Movie::getFramerate() const
+Movie::getFrameRate() const
 {
-    return mFramerate;
+    return mFrameRate;
 }
 
 void
@@ -149,9 +149,9 @@ Movie::updateFrameThreadFn()
         incFramePosition();
 
 
-        // Framerate control, cribbed from AppImplMswBasic.cpp
+        // FrameRate control, cribbed from AppImplMswBasic.cpp
         double currentSeconds   = app::getElapsedSeconds();
-        double secondsPerFrame  = 1.0 / mFramerate;
+        double secondsPerFrame  = 1.0 / mFrameRate;
         mNextFrameTime          = mNextFrameTime + secondsPerFrame;
         if ( mNextFrameTime > currentSeconds )
             ci::sleep( (mNextFrameTime - currentSeconds) * 1000.0 );

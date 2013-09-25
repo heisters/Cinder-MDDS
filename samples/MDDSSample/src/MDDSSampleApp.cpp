@@ -57,7 +57,7 @@ MDDSSampleApp::setup()
         console() << "Error loading movie: " << boom.what() << endl;
     }
 
-    mMovie->setFramerate( 30 );
+    mMovie->setFrameRate( 30 );
 }
 
 void
@@ -81,7 +81,7 @@ MDDSSampleApp::draw()
     info.setBorder( 4, 2 );
     info.setFont( mFont );
     info.addLine( (boost::format( "App FPS: %.2d" ) % getAverageFps()).str() );
-    info.addLine( (boost::format( "Target playback FPS: %.2d" ) % mMovie->getFramerate()).str() );
+    info.addLine( (boost::format( "Target playback FPS: %.2d" ) % mMovie->getFrameRate()).str() );
     info.addLine( (boost::format( "Average playback FPS: %.2d" ) % mMovie->getAverageFps()).str() );
     info.addLine( "Use up/down arrows to adjust movie playback rate" );
     gl::draw( gl::Texture( info.render( true ) ), Vec2f( 10, 10 ) );
@@ -91,9 +91,9 @@ void
 MDDSSampleApp::keyDown( KeyEvent event )
 {
     if ( event.getCode() == KeyEvent::KEY_DOWN )
-        mMovie->setFramerate( mMovie->getFramerate() - 1 );
+        mMovie->setFrameRate( mMovie->getFrameRate() - 1 );
     else if ( event.getCode() == KeyEvent::KEY_UP )
-        mMovie->setFramerate( mMovie->getFramerate() + 1 );
+        mMovie->setFrameRate( mMovie->getFrameRate() + 1 );
 }
 
 CINDER_APP_NATIVE( MDDSSampleApp, RendererGl )
