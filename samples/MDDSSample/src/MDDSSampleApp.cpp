@@ -50,14 +50,12 @@ MDDSSampleApp::setup()
 {
     try
     {
-        mMovie = mdds::Movie::create( getFolderPath() );
+        mMovie = mdds::Movie::create( getFolderPath(), ".DDS", 29.97 );
     }
     catch ( mdds::Movie::LoadError boom )
     {
         console() << "Error loading movie: " << boom.what() << endl;
     }
-
-    mMovie->setFrameRate( 30 );
 }
 
 void
@@ -90,10 +88,10 @@ MDDSSampleApp::draw()
 void
 MDDSSampleApp::keyDown( KeyEvent event )
 {
-    if ( event.getCode() == KeyEvent::KEY_DOWN )
-        mMovie->setFrameRate( mMovie->getFrameRate() - 1 );
-    else if ( event.getCode() == KeyEvent::KEY_UP )
-        mMovie->setFrameRate( mMovie->getFrameRate() + 1 );
+//    if ( event.getCode() == KeyEvent::KEY_DOWN )
+//        mMovie->setFrameRate( mMovie->getFrameRate() - 1 );
+//    else if ( event.getCode() == KeyEvent::KEY_UP )
+//        mMovie->setFrameRate( mMovie->getFrameRate() + 1 );
 }
 
 CINDER_APP_NATIVE( MDDSSampleApp, RendererGl )

@@ -17,10 +17,10 @@ mLoopEnabled( true ),
 mAverageFps( 0 ),
 mFpsLastSampleTime( 0 ),
 mFpsFrameCount( 0 ),
-mFpsLastFrameCount( 0 )
+mFpsLastFrameCount( 0 ),
+mFrameRate( fps ),
+mNextFrameTime( app::getElapsedSeconds() )
 {
-    setFrameRate( fps );
-
     using namespace ci::fs;
 
     if ( !exists( directory ) ) throw LoadError( directory.string() + " does not exist" );
@@ -78,13 +78,6 @@ Movie::draw()
 /*******************************************************************************
  * Play control
  */
-
-void
-Movie::setFrameRate( const double fps )
-{
-    mFrameRate = fps;
-    mNextFrameTime = app::getElapsedSeconds();
-}
 
 double
 Movie::getFrameRate() const
