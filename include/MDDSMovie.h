@@ -32,23 +32,36 @@ public:
 
     // Construction/Destruction ------------------------------------------------
 public:
-    static MovieRef create( const ci::fs::path &directory, const std::string &extension=".DDS", const float fps=29.97f )
+    static MovieRef create( const ci::fs::path &directory, const std::string &extension=".DDS", const double fps=29.97 )
     { return (MovieRef)(new Movie( directory, extension, fps )); }
 
-    Movie( const ci::fs::path &directory, const std::string &extension=".DDS", const float fps=29.97f );
+    Movie( const ci::fs::path &directory, const std::string &extension=".DDS", const double fps=29.97 );
 
     ~Movie();
-
 
     // Lifecycle ---------------------------------------------------------------
 public:
     void                            update();
     void                            draw();
 
+
+    // Play control ------------------------------------------------------------
+public:
+    void                            setFramerate( const double fps );
+    double                          getFramerate() const;
+    double                          getAverageFps() const;
+protected:
+    void                            updateAverageFps();
+    double                          mAverageFps, mFpsLastSampleTime;
+    uint32_t                        mFpsFrameCount, mFpsLastFrameCount;
+    std::atomic< double >           mFramerate, mNextFrameTime;
+
+
     // Async -------------------------------------------------------------------
 protected:
     std::atomic< bool >             mThreadIsRunning, mDataIsFresh;
     std::thread                     mThread;
+    std::mutex                      mMutex;
     void                            updateFrameThreadFn();
 
     struct thread_data {
@@ -64,17 +77,17 @@ protected:
     thread_data                     mThreadData;
 
 
-    // Texture------------------------------------------------------------------
+    // Texture -----------------------------------------------------------------
 protected:
     ::mdds::Texture                 mTexture;
 public:
     const ci::gl::Texture           getTexture() const { return mTexture; }
 
 
-    // File access -------------------------------------------------------------
+    // Position control --------------------------------------------------------
 protected:
     std::atomic< bool >             mLoopEnabled;
-    void                            nextFrame();
+    void                            incFramePosition();
     void                            resetFramePosition();
     
 };
