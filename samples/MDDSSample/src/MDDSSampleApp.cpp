@@ -80,18 +80,31 @@ MDDSSampleApp::draw()
     info.setFont( mFont );
     info.addLine( (boost::format( "App FPS: %.2d" ) % getAverageFps()).str() );
     info.addLine( (boost::format( "Target playback FPS: %.2d" ) % mMovie->getFrameRate()).str() );
+    info.addLine( (boost::format( "Play rate: %.2d" ) % mMovie->getPlayRate()).str() );
     info.addLine( (boost::format( "Average playback FPS: %.2d" ) % mMovie->getAverageFps()).str() );
-    info.addLine( "Use up/down arrows to adjust movie playback rate" );
+    info.addLine( "Controls:" );
+    info.addLine( "up arrow: double playback rate" );
+    info.addLine( "down arrow: halve playback rate" );
+    info.addLine( "f: play forward at normal rate" );
+    info.addLine( "r: play reverse at normal rate" );
+    info.addLine( "space: pause" );
     gl::draw( gl::Texture( info.render( true ) ), Vec2f( 10, 10 ) );
 }
 
 void
 MDDSSampleApp::keyDown( KeyEvent event )
 {
-//    if ( event.getCode() == KeyEvent::KEY_DOWN )
-//        mMovie->setFrameRate( mMovie->getFrameRate() - 1 );
-//    else if ( event.getCode() == KeyEvent::KEY_UP )
-//        mMovie->setFrameRate( mMovie->getFrameRate() + 1 );
+    if ( event.getChar() == 'f' )
+        mMovie->setPlayRate( 1.0 );
+    else if ( event.getChar() == 'r' )
+        mMovie->setPlayRate( -1.0 );
+    else if ( event.getCode() == KeyEvent::KEY_UP )
+        mMovie->setPlayRate( mMovie->getPlayRate() * 2.0 );
+    else if ( event.getCode() == KeyEvent::KEY_DOWN )
+        mMovie->setPlayRate( mMovie->getPlayRate() * 0.5 );
+    else if ( event.getCode() == KeyEvent::KEY_SPACE )
+        mMovie->setPlayRate( 0.0 );
+
 }
 
 CINDER_APP_NATIVE( MDDSSampleApp, RendererGl )

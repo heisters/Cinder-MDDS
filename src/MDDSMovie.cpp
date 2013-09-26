@@ -1,6 +1,7 @@
 #include "MDDSMovie.h"
 #include "cinder/app/App.h"
 #include "cinder/Utilities.h"
+#include "cinder/CinderMath.h"
 
 using namespace std;
 using namespace ci;
@@ -19,16 +20,23 @@ mFpsLastSampleTime( 0 ),
 mFpsFrameCount( 0 ),
 mFpsLastFrameCount( 0 ),
 mFrameRate( fps ),
-mNextFrameTime( app::getElapsedSeconds() )
+mNextFrameTime( app::getElapsedSeconds() ),
+mFrameRateIsChanged( false )
 {
+    setPlayRate( 1.0 );
+
     using namespace ci::fs;
 
     if ( !exists( directory ) ) throw LoadError( directory.string() + " does not exist" );
     if ( !is_directory( directory ) ) throw LoadError( directory.string() + " is not a directory" );
 
+
     mThreadData.extension       = extension;
     mThreadData.directoryPath   = directory;
-    resetFramePosition();
+    mThreadData.frameIdx        = 0;
+
+    readFramePaths();
+
     mThread                     = thread( bind( &Movie::updateFrameThreadFn, this ) );
     mThreadIsRunning            = true;
 }
@@ -59,9 +67,10 @@ Movie::update()
 {
     if ( mDataIsFresh )
     {
-        mMutex.lock();
-        mTexture = ::mdds::Texture::loadDds( mThreadData.buffer->createStream(), ::mdds::Texture::Format() );
-        mMutex.unlock();
+        {
+            lock_guard< mutex > lock( mMutex );
+            mTexture = ::mdds::Texture::loadDds( mThreadData.buffer->createStream(), ::mdds::Texture::Format() );
+        }
 
         if ( mTexture == nullptr ) warn( "error creating texture" );
         	
@@ -106,6 +115,40 @@ Movie::getAverageFps() const
     return mAverageFps;
 }
 
+void
+Movie::setPlayRate( const double newRate )
+{
+    mFrameRateIsChanged = newRate != mPlayRate;
+    mPlayRate = newRate;
+
+    if ( mFrameRateIsChanged )
+    {
+        lock_guard< mutex > lock( mMutex );
+        mFrameRateIsChangedCv.notify_all();
+    }
+}
+
+double
+Movie::getPlayRate() const
+{
+    return mPlayRate;
+}
+
+void
+Movie::readFramePaths()
+{
+    using namespace ci::fs;
+
+    if ( mThreadData.framePaths.empty() )
+    {
+        for ( auto it = directory_iterator( mThreadData.directoryPath ); it != directory_iterator(); it++ )
+        {
+            if ( it->path().extension() != mThreadData.extension ) continue;
+
+            mThreadData.framePaths.push_back( it->path() );
+        }
+    }
+}
 
 /*******************************************************************************
  * Async
@@ -118,36 +161,35 @@ Movie::updateFrameThreadFn()
 
     ci::ThreadSetup threadSetup;
 
-
-    mNextFrameTime = app::getElapsedSeconds();
-    
     while ( mThreadIsRunning )
     {
-        if ( mThreadData.directoryIt->path().extension() != mThreadData.extension )
-        {
-            // Skip this frame
-            incFramePosition();
-            continue;
-        }
+        mNextFrameTime = app::getElapsedSeconds();
+        
+        unique_lock< mutex > lock( mMutex );
 
         // Read data into memory buffer
-        auto ds_path = DataSourcePath::create( mThreadData.directoryIt->path() );
-        mMutex.lock();
+        auto ds_path = DataSourcePath::create( mThreadData.framePaths[ mThreadData.frameIdx ] );
         mThreadData.buffer = DataSourceBuffer::create( ds_path->getBuffer() );
-        mMutex.unlock();
+
 
         mDataIsFresh = true;
         updateAverageFps();
 
-        incFramePosition();
+        nextFramePosition();
 
 
         // FrameRate control, cribbed from AppImplMswBasic.cpp
         double currentSeconds   = app::getElapsedSeconds();
-        double secondsPerFrame  = 1.0 / mFrameRate;
+        double secondsPerFrame  = mPlayRate == 0.0 ? 1.0 : ((1.0 / math< double >::abs( mPlayRate )) / mFrameRate);
         mNextFrameTime          = mNextFrameTime + secondsPerFrame;
         if ( mNextFrameTime > currentSeconds )
-            ci::sleep( (mNextFrameTime - currentSeconds) * 1000.0 );
+        {
+            int ms = (mNextFrameTime - currentSeconds) * 1000.0;
+            mFrameRateIsChangedCv.wait_for( lock,
+                                            chrono::milliseconds( ms ),
+                                            [&]{ return mFrameRateIsChanged; } );
+        }
+        mFrameRateIsChanged = false;
     }
 }
 
@@ -156,14 +198,20 @@ Movie::updateFrameThreadFn()
  */
 
 void
-Movie::incFramePosition()
+Movie::nextFramePosition()
 {
-    ++mThreadData.directoryIt;
-    if ( mThreadData.directoryIt == ci::fs::directory_iterator() && mLoopEnabled ) resetFramePosition();
-}
+    using namespace ci::fs;
 
-void
-Movie::resetFramePosition()
-{
-    mThreadData.directoryIt = ci::fs::directory_iterator( mThreadData.directoryPath );
+    mThreadData.frameIdx += mPlayRate == 0.0 ? 0 : (mPlayRate > 0 ? 1 : -1);
+
+    if ( mThreadData.frameIdx == mThreadData.framePaths.size() )
+    {
+        if ( mLoopEnabled ) mThreadData.frameIdx = 0;
+        else mThreadData.frameIdx = mThreadData.framePaths.size() - 1;
+    }
+    else if ( mThreadData.frameIdx == (size_t)-1 )
+    {
+        if ( mLoopEnabled ) mThreadData.frameIdx = mThreadData.framePaths.size() -1;
+        else mThreadData.frameIdx = 0;
+    }
 }

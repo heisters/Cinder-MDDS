@@ -61,11 +61,19 @@ public:
     double                          getFrameRate() const;
     //! Returns the actual rate at which frames are being read.
     double                          getAverageFps() const;
+    //! Set the rate at which frames are played back. 1 is normal, -1 is
+    // backwards, 0 is paused.
+    void                            setPlayRate( const double newRate );
+    //! Get the rate at which frames are played back, relative to the frame
+    // rate.
+    double                          getPlayRate() const;
 protected:
     void                            updateAverageFps();
     double                          mAverageFps, mFpsLastSampleTime;
     uint32_t                        mFpsFrameCount, mFpsLastFrameCount;
-    std::atomic< double >           mFrameRate, mNextFrameTime;
+    std::atomic< double >           mFrameRate, mNextFrameTime, mPlayRate;
+    bool                            mFrameRateIsChanged;
+    void                            readFramePaths();
 
 
     // Async -------------------------------------------------------------------
@@ -73,6 +81,7 @@ protected:
     std::atomic< bool >             mThreadIsRunning, mDataIsFresh;
     std::thread                     mThread;
     std::mutex                      mMutex;
+    std::condition_variable         mFrameRateIsChangedCv;
     void                            updateFrameThreadFn();
 
     struct thread_data {
@@ -82,8 +91,9 @@ protected:
 
         std::string                 extension;
         ci::fs::path                directoryPath;
-        ci::fs::directory_iterator  directoryIt;
         ci::DataSourceBufferRef     buffer;
+        size_t                      frameIdx;
+        std::vector< ci::fs::path > framePaths;
     };
     thread_data                     mThreadData;
 
@@ -99,8 +109,7 @@ public:
     // Position control --------------------------------------------------------
 protected:
     std::atomic< bool >             mLoopEnabled;
-    void                            incFramePosition();
-    void                            resetFramePosition();
+    void                            nextFramePosition();
     
 };
 }
