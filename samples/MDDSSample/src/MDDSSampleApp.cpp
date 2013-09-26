@@ -79,12 +79,12 @@ MDDSSampleApp::draw()
     info.setBorder( 4, 2 );
     info.setFont( mFont );
     info.addLine( (boost::format( "App FPS: %.2d" ) % getAverageFps()).str() );
-    info.addLine( (boost::format( "Target playback FPS: %.2d" ) % mMovie->getFrameRate()).str() );
+    info.addLine( (boost::format( "Movie FPS: %.2d" ) % mMovie->getFrameRate()).str() );
     info.addLine( (boost::format( "Play rate: %.2d" ) % mMovie->getPlayRate()).str() );
     info.addLine( (boost::format( "Average playback FPS: %.2d" ) % mMovie->getAverageFps()).str() );
     info.addLine( "Controls:" );
-    info.addLine( "up arrow: double playback rate" );
-    info.addLine( "down arrow: halve playback rate" );
+    info.addLine( "↑: double playback rate" );
+    info.addLine( "↓: halve playback rate" );
     info.addLine( "f: play forward at normal rate" );
     info.addLine( "r: play reverse at normal rate" );
     info.addLine( "space: pause" );
