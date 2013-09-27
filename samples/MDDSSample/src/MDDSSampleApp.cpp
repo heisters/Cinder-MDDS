@@ -2,6 +2,7 @@
 #include "cinder/gl/gl.h"
 #include "cinder/Utilities.h"
 #include "cinder/Text.h"
+#include "cinder/Rand.h"
 
 #include <boost/format.hpp>
 
@@ -88,6 +89,7 @@ MDDSSampleApp::draw()
     info.addLine( "f: play forward at normal rate" );
     info.addLine( "r: play reverse at normal rate" );
     info.addLine( "space: pause" );
+    info.addLine( "↵: jump to random frame" );
     gl::draw( gl::Texture( info.render( true ) ), Vec2f( 10, 10 ) );
 }
 
@@ -104,6 +106,8 @@ MDDSSampleApp::keyDown( KeyEvent event )
         mMovie->setPlayRate( mMovie->getPlayRate() * 0.5 );
     else if ( event.getCode() == KeyEvent::KEY_SPACE )
         mMovie->setPlayRate( 0.0 );
+    else if ( event.getCode() == KeyEvent::KEY_RETURN )
+        mMovie->seekToFrame( Rand::randInt( mMovie->getNumFrames() ) );
 
 }
 

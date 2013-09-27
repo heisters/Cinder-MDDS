@@ -57,16 +57,44 @@ public:
 
     // Play control ------------------------------------------------------------
 public:
+
     //! Returns the "native" frame rate passed to the constructor.
     double                          getFrameRate() const;
+
     //! Returns the actual rate at which frames are being read.
     double                          getAverageFps() const;
+
     //! Set the rate at which frames are played back. 1 is normal, -1 is
     // backwards, 0 is paused.
     void                            setPlayRate( const double newRate );
+
     //! Get the rate at which frames are played back, relative to the frame
     // rate.
     double                          getPlayRate() const;
+
+    //! Jump to \a seconds position in the movie
+    void                            seekToTime( const double seconds );
+
+    //! Jump to \a frame position in the movie
+    void                            seekToFrame( const size_t frame );
+
+    //! Jump to the beginning of the movie
+    void                            seekToStart();
+
+    //! Jump to the end of the movie
+    void                            seekToEnd();
+
+    //! Get the current position in frames
+    size_t                          getCurrentFrame() const;
+
+    //! Get the total number of frames in the movie
+    size_t                          getNumFrames() const;
+
+    //! Get the current position in seconds
+    double                          getCurrentTime() const;
+
+    //! Get the total number of seconds in the movie
+    double                          getDuration() const;
 protected:
     void                            updateAverageFps();
     double                          mAverageFps, mFpsLastSampleTime;
@@ -74,6 +102,8 @@ protected:
     std::atomic< double >           mFrameRate, mNextFrameTime, mPlayRate;
     bool                            mFrameRateIsChanged;
     void                            readFramePaths();
+    std::atomic< size_t >           mCurrentFrameIdx, mNumFrames;
+    std::atomic< bool >             mCurrentFrameIsFresh;
 
 
     // Async -------------------------------------------------------------------
@@ -81,7 +111,7 @@ protected:
     std::atomic< bool >             mThreadIsRunning, mDataIsFresh;
     std::thread                     mThread;
     std::mutex                      mMutex;
-    std::condition_variable         mFrameRateIsChangedCv;
+    std::condition_variable         mInterruptFrameRateSleepCv;
     void                            updateFrameThreadFn();
 
     struct thread_data {
@@ -92,7 +122,6 @@ protected:
         std::string                 extension;
         ci::fs::path                directoryPath;
         ci::DataSourceBufferRef     buffer;
-        size_t                      frameIdx;
         std::vector< ci::fs::path > framePaths;
     };
     thread_data                     mThreadData;

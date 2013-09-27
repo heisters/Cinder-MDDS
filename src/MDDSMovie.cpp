@@ -21,7 +21,10 @@ mFpsFrameCount( 0 ),
 mFpsLastFrameCount( 0 ),
 mFrameRate( fps ),
 mNextFrameTime( app::getElapsedSeconds() ),
-mFrameRateIsChanged( false )
+mFrameRateIsChanged( false ),
+mCurrentFrameIdx( 0 ),
+mCurrentFrameIsFresh( false ),
+mNumFrames( 0 )
 {
     setPlayRate( 1.0 );
 
@@ -33,7 +36,6 @@ mFrameRateIsChanged( false )
 
     mThreadData.extension       = extension;
     mThreadData.directoryPath   = directory;
-    mThreadData.frameIdx        = 0;
 
     readFramePaths();
 
@@ -124,7 +126,7 @@ Movie::setPlayRate( const double newRate )
     if ( mFrameRateIsChanged )
     {
         lock_guard< mutex > lock( mMutex );
-        mFrameRateIsChangedCv.notify_all();
+        mInterruptFrameRateSleepCv.notify_all();
     }
 }
 
@@ -139,15 +141,65 @@ Movie::readFramePaths()
 {
     using namespace ci::fs;
 
-    if ( mThreadData.framePaths.empty() )
-    {
-        for ( auto it = directory_iterator( mThreadData.directoryPath ); it != directory_iterator(); it++ )
-        {
-            if ( it->path().extension() != mThreadData.extension ) continue;
+    mThreadData.framePaths.clear();
 
-            mThreadData.framePaths.push_back( it->path() );
-        }
+    for ( auto it = directory_iterator( mThreadData.directoryPath ); it != directory_iterator(); it++ )
+    {
+        if ( it->path().extension() != mThreadData.extension ) continue;
+
+        mThreadData.framePaths.push_back( it->path() );
     }
+
+    mNumFrames = mThreadData.framePaths.size();
+}
+
+void
+Movie::seekToTime( const double seconds )
+{
+    seekToFrame( seconds * mFrameRate );
+}
+
+void
+Movie::seekToFrame( const size_t frame )
+{
+    mCurrentFrameIdx = frame;
+    mCurrentFrameIsFresh = true;
+}
+
+void
+Movie::seekToStart()
+{
+    seekToFrame( 0 );
+}
+
+void
+Movie::seekToEnd()
+{
+    seekToFrame( -1 );
+}
+
+size_t
+Movie::getCurrentFrame() const
+{
+    return mCurrentFrameIdx;
+}
+
+size_t
+Movie::getNumFrames() const
+{
+    return mNumFrames;
+}
+
+double
+Movie::getCurrentTime() const
+{
+    return (double)mCurrentFrameIdx / mFrameRate;
+}
+
+double
+Movie::getDuration() const
+{
+    return (double)mNumFrames / mFrameRate;
 }
 
 /*******************************************************************************
@@ -168,7 +220,7 @@ Movie::updateFrameThreadFn()
         unique_lock< mutex > lock( mMutex );
 
         // Read data into memory buffer
-        auto ds_path = DataSourcePath::create( mThreadData.framePaths[ mThreadData.frameIdx ] );
+        auto ds_path = DataSourcePath::create( mThreadData.framePaths[ mCurrentFrameIdx ] );
         mThreadData.buffer = DataSourceBuffer::create( ds_path->getBuffer() );
 
 
@@ -185,9 +237,9 @@ Movie::updateFrameThreadFn()
         if ( mNextFrameTime > currentSeconds )
         {
             int ms = (mNextFrameTime - currentSeconds) * 1000.0;
-            mFrameRateIsChangedCv.wait_for( lock,
-                                            chrono::milliseconds( ms ),
-                                            [&]{ return mFrameRateIsChanged; } );
+            mInterruptFrameRateSleepCv.wait_for( lock,
+                                                 chrono::milliseconds( ms ),
+                                                 [&]{ return mFrameRateIsChanged; } );
         }
         mFrameRateIsChanged = false;
     }
@@ -202,16 +254,19 @@ Movie::nextFramePosition()
 {
     using namespace ci::fs;
 
-    mThreadData.frameIdx += mPlayRate == 0.0 ? 0 : (mPlayRate > 0 ? 1 : -1);
+    if ( !mCurrentFrameIsFresh )
+        mCurrentFrameIdx += mPlayRate == 0.0 ? 0 : (mPlayRate > 0 ? 1 : -1);
 
-    if ( mThreadData.frameIdx == mThreadData.framePaths.size() )
+    mCurrentFrameIsFresh = false;
+
+    if ( mCurrentFrameIdx == mNumFrames )
     {
-        if ( mLoopEnabled ) mThreadData.frameIdx = 0;
-        else mThreadData.frameIdx = mThreadData.framePaths.size() - 1;
+        if ( mLoopEnabled ) mCurrentFrameIdx = 0;
+        else mCurrentFrameIdx = mNumFrames - 1;
     }
-    else if ( mThreadData.frameIdx == (size_t)-1 )
+    else if ( mCurrentFrameIdx == (size_t)-1 )
     {
-        if ( mLoopEnabled ) mThreadData.frameIdx = mThreadData.framePaths.size() -1;
-        else mThreadData.frameIdx = 0;
+        if ( mLoopEnabled ) mCurrentFrameIdx = mNumFrames -1;
+        else mCurrentFrameIdx = 0;
     }
 }
