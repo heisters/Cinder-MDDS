@@ -21,7 +21,7 @@ mFpsFrameCount( 0 ),
 mFpsLastFrameCount( 0 ),
 mFrameRate( fps ),
 mNextFrameTime( app::getElapsedSeconds() ),
-mFrameRateIsChanged( false ),
+mInterruptTriggeredFoRealz( false ),
 mCurrentFrameIdx( 0 ),
 mCurrentFrameIsFresh( false ),
 mNumFrames( 0 )
@@ -120,10 +120,10 @@ Movie::getAverageFps() const
 void
 Movie::setPlayRate( const double newRate )
 {
-    mFrameRateIsChanged = newRate != mPlayRate;
+    mInterruptTriggeredFoRealz = newRate != mPlayRate;
     mPlayRate = newRate;
 
-    if ( mFrameRateIsChanged )
+    if ( mInterruptTriggeredFoRealz )
     {
         lock_guard< mutex > lock( mMutex );
         mInterruptFrameRateSleepCv.notify_all();
@@ -164,6 +164,9 @@ Movie::seekToFrame( const size_t frame )
 {
     mCurrentFrameIdx = frame;
     mCurrentFrameIsFresh = true;
+    mInterruptTriggeredFoRealz = true;
+    lock_guard< mutex > lock( mMutex );
+    mInterruptFrameRateSleepCv.notify_all();
 }
 
 void
@@ -239,9 +242,9 @@ Movie::updateFrameThreadFn()
             int ms = (mNextFrameTime - currentSeconds) * 1000.0;
             mInterruptFrameRateSleepCv.wait_for( lock,
                                                  chrono::milliseconds( ms ),
-                                                 [&]{ return mFrameRateIsChanged; } );
+                                                 [&]{ return mInterruptTriggeredFoRealz; } );
         }
-        mFrameRateIsChanged = false;
+        mInterruptTriggeredFoRealz = false;
     }
 }
 

@@ -100,7 +100,6 @@ protected:
     double                          mAverageFps, mFpsLastSampleTime;
     uint32_t                        mFpsFrameCount, mFpsLastFrameCount;
     std::atomic< double >           mFrameRate, mNextFrameTime, mPlayRate;
-    bool                            mFrameRateIsChanged;
     void                            readFramePaths();
     std::atomic< size_t >           mCurrentFrameIdx, mNumFrames;
     std::atomic< bool >             mCurrentFrameIsFresh;
@@ -111,6 +110,7 @@ protected:
     std::atomic< bool >             mThreadIsRunning, mDataIsFresh;
     std::thread                     mThread;
     std::mutex                      mMutex;
+    bool                            mInterruptTriggeredFoRealz;
     std::condition_variable         mInterruptFrameRateSleepCv;
     void                            updateFrameThreadFn();
 
