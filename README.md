@@ -1,7 +1,8 @@
 MDDS block for Cinder
 =====================
 
-A Cinder block for playback of sequences of DDS-compressed textures.
+A Cinder block for playback of sequences of DDS-compressed textures. Like
+M-JPEG, but with DDS.
 
 Usage
 -----
